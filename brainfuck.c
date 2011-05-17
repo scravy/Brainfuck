@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
 				printf("  -%c  %s %i\n", 'm', "memory size - defaults to", MEM);
 				printf("  -%c  %s\n", 'b', "buffer size (for reading from stdin)");
 				printf("  -%c  %s\n", 'r', "run piece of code from command line arguments");
-				printf("  -%c  %s\n", 'x', "enables extensions (@${}=#_*/%&|^?!)");
+				printf("  -%c  %s\n", 'x', "enables extensions (@${}=#_*/%&|^?;~!)");
 				printf("  -%c  %s\n", 's', "stack size (implies -x)");
 				printf("  -%c  %s\n", 'o', "translate to ook!");
 				printf("  -%c  %s\n", 'c', "create c code");
@@ -264,15 +264,22 @@ int main(int argc, char** argv) {
 						break;
 					case '/':
 						c = pop();
-						memory[p] = c / pop();
+						memory[p] = pop();
+						if (memory[p] != 0) {
+							memory[p] /= c;
+						}
 						break;
 					case '=':
 						c = pop();
 						memory[p] = c == pop();
 						break;
+					case '\\':
 					case '%':
 						c = pop();
-						memory[p] = c % pop();
+						memory[p] = pop();
+						if (memory[p] != 0) {
+							memory[p] %= c;
+						}
 						break;
 					case '&':
 						c = pop();
@@ -300,9 +307,11 @@ int main(int argc, char** argv) {
 					case ';':
 						i += memory[p] - 1;
 						break;
+					case '~':
+						p = 0;
+						break;
 					case '!':
 						return memory[p] % 256;
-						break;
 					}
 				}
 			}
