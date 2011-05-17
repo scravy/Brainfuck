@@ -125,9 +125,11 @@ int main(int argc, char** argv) {
 		}
 		if (extensions & 2) {
 			printf("%s\n\n",    "#include \"stdio.h\"");
+			printf("%s\n\n",    "#include \"stdlib.h\"");
 			printf("%s\n",      "int main() {");
-			printf("\tint memory[%li];\n", max);
+			printf("\tint* memory = malloc(%li);\n", max);
 			printf("\t%s\n",    "int p = 0;");
+			printf("\t%s\n",    "if (!memory) return 2;");
 			p = '\0';
 			for (i = 0; i < length; i++) {
 				switch (code[i]) {
