@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
 	}
 	
 	if (code) {
-		int c = 0;
+		int max1, p, sp, c = 0;
 		
 		if (!(extensions & 32)) {
 			for (i = 0; i < length; i++) {
@@ -171,9 +171,9 @@ int main(int argc, char** argv) {
 		if (!(memory = malloc(max))) return 3;
 		if (extensions & 1) if (!(stack = malloc(stk))) return 3;
 		
-		int max1 = max - 1;
-		int p = 0;
-		int sp = 0;
+		max1 = max - 1;
+		p = 0;
+		sp = 0;
 		
 		for (i = 0; i < max; i++) {
 			memory[i] = 0;
@@ -238,31 +238,40 @@ int main(int argc, char** argv) {
 						memory[p] = stack[--sp];
 						break;
 					case '*':
-						memory[p] = stack[--sp] * stack[--sp];
+						c = stack[--sp];
+						memory[p] = c * stack[--sp];
 						break;
 					case '/':
-						memory[p] = stack[--sp] / stack[--sp];
+						c = stack[--sp];
+						memory[p] = c / stack[--sp];
 						break;
 					case '=':
-						memory[p] = stack[--sp] == stack[--sp];
+						c = stack[--sp];
+						memory[p] = c == stack[--sp];
 						break;
 					case '%':
-						memory[p] = stack[--sp] % stack[--sp];
+						c = stack[--sp];
+						memory[p] = c % stack[--sp];
 						break;
 					case '&':
-						memory[p] = stack[--sp] & stack[--sp];
+						c = stack[--sp];
+						memory[p] = c & stack[--sp];
 						break;
 					case '|':
-						memory[p] = stack[--sp] | stack[--sp];
+						c = stack[--sp];
+						memory[p] = c | stack[--sp];
 						break;
 					case '^':
-						memory[p] = stack[--sp] ^ stack[--sp];
+						c = stack[--sp];
+						memory[p] = c ^ stack[--sp];
 						break;
 					case '#':
-						memory[p] = stack[--sp] + stack[--sp];
+						c = stack[--sp];
+						memory[p] = c + stack[--sp];
 						break;
 					case '_':
-						memory[p] = stack[--sp] - stack[--sp];
+						c = stack[--sp];
+						memory[p] = stack[--sp] - c;
 						break;
 					case '?':
 						memory[p] = sp > 0;
