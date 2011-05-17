@@ -243,6 +243,8 @@ int main(int argc, char** argv) {
 				break;
 			default:
 				if (extensions & 1) {
+#define push(x) stack[sp++] = x
+#define pop()   stack[--sp]
 					switch (code[i]) {
 					case '$':
 						printf("%c", '\n');
@@ -251,46 +253,46 @@ int main(int argc, char** argv) {
 						printf("%i", memory[p]);
 						break;
 					case '{':
-						stack[sp++] = memory[p];
+						push(memory[p]);
 						break;
 					case '}':
-						memory[p] = stack[--sp];
+						memory[p] = pop();
 						break;
 					case '*':
-						c = stack[--sp];
-						memory[p] = c * stack[--sp];
+						c = pop();
+						memory[p] = c * pop();
 						break;
 					case '/':
-						c = stack[--sp];
-						memory[p] = c / stack[--sp];
+						c = pop();
+						memory[p] = c / pop();
 						break;
 					case '=':
-						c = stack[--sp];
-						memory[p] = c == stack[--sp];
+						c = pop();
+						memory[p] = c == pop();
 						break;
 					case '%':
-						c = stack[--sp];
-						memory[p] = c % stack[--sp];
+						c = pop();
+						memory[p] = c % pop();
 						break;
 					case '&':
-						c = stack[--sp];
-						memory[p] = c & stack[--sp];
+						c = pop();
+						memory[p] = c & pop();
 						break;
 					case '|':
-						c = stack[--sp];
-						memory[p] = c | stack[--sp];
+						c = pop();
+						memory[p] = c | pop();
 						break;
 					case '^':
-						c = stack[--sp];
-						memory[p] = c ^ stack[--sp];
+						c = pop();
+						memory[p] = c ^ pop();
 						break;
 					case '#':
-						c = stack[--sp];
-						memory[p] = c + stack[--sp];
+						c = pop();
+						memory[p] = c + pop();
 						break;
 					case '_':
-						c = stack[--sp];
-						memory[p] = stack[--sp] - c;
+						c = pop();
+						memory[p] = c - pop();
 						break;
 					case '?':
 						memory[p] = sp > 0;
