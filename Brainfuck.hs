@@ -1,5 +1,6 @@
-import Prelude hiding (putStr, putStrLn)
-import System.IO.UTF8
+module Brainfuck (brainfuck)
+	where
+
 import Data.Char
 
 brainfuck :: [Char] -> IO ()
