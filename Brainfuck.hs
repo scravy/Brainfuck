@@ -3,9 +3,10 @@ module Brainfuck (brainfuck)
 
 import Data.Char
 import System.Exit
+import System.IO (hFlush, stdout)
 
 brainfuck :: [Char] -> IO ()
-brainfuck text@(x:xs) = bf [] x (xs ++ " ") [] 0 []
+brainfuck (x:xs) = bf [] x (xs ++ " ") [] 0 []
 	where
 		bf ib '>' (ni:ia) db dp (nd:da)     = bf ('>':ib) ni ia (dp:db) nd da
 		bf ib '>' (ni:ia) db dp []          = bf ('>':ib) ni ia (dp:db) 0 []
@@ -32,11 +33,11 @@ brainfuck text@(x:xs) = bf [] x (xs ++ " ") [] 0 []
 				seek ('[':xs) b ia      = seek xs (b-1) ('[':ia) 
 				seek (x:xs) b ia        = seek xs b (x:ia)
 		bf ib '.' (ni:ia) db dp da          = putc dp >> bf ('.':ib) ni ia db dp da
-		bf ib ',' (ni:ia) db dp da          = do c <- getc; bf (',':ib) ni ia db c da
+		bf ib ',' (ni:ia) db dp da          = getc >>= (\c -> bf (',':ib) ni ia db c da)
 		bf ib _ (ni:ia) db dp da            = bf ib ni ia db dp da
 		bf _ _ [] _ _ _                     = return ()
 
-putc x = catch (putChar $ chr $ fromInteger x `mod` 256) (\e -> exitSuccess)
+putc x = catch (putChar $ chr $ fromInteger x `mod` 256) (\e -> exitSuccess) >> hFlush stdout
 
 getc = do c <- catch getChar (\e -> return '\EOT'); return $ sanitize c
 	where sanitize '\EOT' = -1
