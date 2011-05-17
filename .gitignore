@@ -2,3 +2,5 @@ brainfuck
 helloworld
 cat
 Interpreter
+*.hi
+*.o
