@@ -295,6 +295,9 @@ int main(int argc, char** argv) {
 					case '?':
 						memory[p] = sp > 0;
 						break;
+					case ';':
+						i += memory[p] - 1;
+						break;
 					case '!':
 						return memory[p] % 256;
 						break;
