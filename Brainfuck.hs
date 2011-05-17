@@ -37,6 +37,6 @@ brainfuck text@(x:xs) = bf [] x (xs ++ " ") [] 0 []
 
 putc x = putChar $ chr $ fromInteger x `mod` 256
 
-getc = do c <- getChar; return $ sanitize c
+getc = do c <- catch getChar (\e -> return '\EOT'); return $ sanitize c
 	where sanitize '\EOT' = -1
 	      sanitize x      = fromIntegral $ ord x
