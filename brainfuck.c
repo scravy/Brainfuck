@@ -128,7 +128,29 @@ int main(int argc, char** argv) {
 			printf("%s\n",      "int main() {");
 			printf("\tint memory[%li];\n", max);
 			printf("\t%s\n",    "int p = 0;");
+			p = '\0';
 			for (i = 0; i < length; i++) {
+				switch (code[i]) {
+					case '>': case '<': case '+': case '-': case '[': case ']': case '.': case ',': break;
+					default: continue;
+				}
+				if (code[i] != p) {
+					if (p == '+') {
+						printf("\tmemory[p] += %i;\n", c);
+						if (extensions & 4) {
+							printf("\tmemory[p] %%= %li;\n", max);
+						}
+						c = 0;
+					} else if (p == '-') {
+						if (extensions & 4) {
+							printf("\tmemory[p] += %li;\n", max - c);
+							printf("\tmemory[p] %%= %li;\n", max);
+						} else {
+							printf("\tmemory[p] -= %i;\n", c);
+						}
+						c = 0;
+					}
+				}
 				switch (code[i]) {
 				case '>':
 					printf("\t%s\n", "p++;");
@@ -137,18 +159,10 @@ int main(int argc, char** argv) {
 					printf("\t%s\n", "p--;");
 					break;
 				case '+':
-					printf("\t%s\n", "memory[p]++;");
-					if (extensions & 4) {
-						printf("\tmemory[p] %%= %li;\n", max);
-					}
+					c++;
 					break;
 				case '-':
-					if (extensions & 4) {
-						printf("\tmemory[p] += %li;\n", max - 1);
-						printf("\tmemory[p] %%= %li;\n", max);
-					} else {
-						printf("\t%s\n", "memory[p]--;");
-					}
+					c++;
 					break;
 				case '[':
 					printf("\t%s\n", "while (memory[p])\n\t{");
@@ -162,7 +176,10 @@ int main(int argc, char** argv) {
 				case ',':
 					printf("\t%s\n", "memory[p] = getchar();");
 					break;
+				default:
+					continue;
 				}
+				p = code[i];
 			}
 			printf("\t%s\n", "return 0;\n}");
 			return 0;	
