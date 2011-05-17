@@ -2,6 +2,7 @@ module Brainfuck (brainfuck)
 	where
 
 import Data.Char
+import System.Exit
 
 brainfuck :: [Char] -> IO ()
 brainfuck text@(x:xs) = bf [] x (xs ++ " ") [] 0 []
@@ -35,7 +36,7 @@ brainfuck text@(x:xs) = bf [] x (xs ++ " ") [] 0 []
 		bf ib _ (ni:ia) db dp da            = bf ib ni ia db dp da
 		bf _ _ [] _ _ _                     = return ()
 
-putc x = putChar $ chr $ fromInteger x `mod` 256
+putc x = catch (putChar $ chr $ fromInteger x `mod` 256) (\e -> exitSuccess)
 
 getc = do c <- catch getChar (\e -> return '\EOT'); return $ sanitize c
 	where sanitize '\EOT' = -1
