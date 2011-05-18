@@ -4,3 +4,4 @@ cat
 Interpreter
 *.hi
 *.o
+.DS_Store
