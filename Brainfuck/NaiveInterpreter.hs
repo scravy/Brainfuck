@@ -1,4 +1,4 @@
-import Brainfuck
+import Brainfuck.Naive
 
 import System (getArgs)
 import System.Console.GetOpt

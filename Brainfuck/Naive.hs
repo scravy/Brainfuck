@@ -1,4 +1,5 @@
-module Brainfuck (brainfuck)
+{-# LANGUAGE BangPatterns #-}
+module Brainfuck.Naive (brainfuck)
 	where
 
 import Data.Char
