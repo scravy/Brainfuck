@@ -14,18 +14,20 @@ helloworld: helloworld.c
 helloworld.c: helloworld.bf bf
 	./bf -c $< > $@
 
+haskell: Naive SamB
+
 Naive: Brainfuck/Naive.hs Brainfuck/NaiveInterpreter.hs
-	ghc --make Brainfuck/NaiveInterpreter.hs
+	ghc --make Brainfuck/NaiveInterpreter.hs -o Naive
 
 SamB: Brainfuck/SamB.hs
-	ghc --make Brainfuck/SamB.hs
+	ghc --make Brainfuck/SamB.hs -o SamB
 
 clean:
 	rm -f bf
 	rm -f helloworld
 	rm -f helloworld.c
 	rm -f Brainfuck/*.o Brainfuck/*.hi
-	rm -f Brainfuck/Interpreter
-	rm -f Brainfuck/SamB
+	rm -f Naive
+	rm -f SamB
 
 .PHONY: clean

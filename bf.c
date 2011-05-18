@@ -1,7 +1,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 
-#define VERSION "v2011-05-17 03:57 CET -- brainfuck interpreter by tiredness can kill at warhog dot net"
+#define VERSION "v2011-05-18 11:24 CET -- brainfuck interpreter by tiredness can kill at warhog dot net"
 
 #define MEM 30000
 #define BUF 4096
