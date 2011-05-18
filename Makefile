@@ -11,7 +11,13 @@ install: bf
 helloworld: helloworld.c
 	$(CC) $(FLAGS) -o $@ $<
 
-helloworld.c: helloworld.bf bf
+prime: prime.c
+	$(CC) $(FLAGS) -o $@ $<
+
+helloworld.c: scripts/helloworld.bf bf
+	./bf -c $< > $@
+
+prime.c: scripts/prime.bf bf
 	./bf -c $< > $@
 
 haskell: Naive SamB
@@ -26,6 +32,8 @@ clean:
 	rm -f bf
 	rm -f helloworld
 	rm -f helloworld.c
+	rm -f prime
+	rm -f prime.c
 	rm -f Brainfuck/*.o Brainfuck/*.hi
 	rm -f Naive
 	rm -f SamB
