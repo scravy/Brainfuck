@@ -1,13 +1,17 @@
 CC = gcc
 FLAGS = -ansi -Wall -pedantic -O3
+PREFIX = /usr/local
 
-bf: brainfuck.c
+bf: bf.c
 	$(CC) $(FLAGS) -o $@ $<
+
+install: bf
+	mv bf $(PREFIX)/bin
 
 helloworld: helloworld.c
 	$(CC) $(FLAGS) -o $@ $<
 
-helloworld.c: helloworld.bf brainfuck
+helloworld.c: helloworld.bf bf
 	./bf -c $< > $@
 
 Naive: Brainfuck/Naive.hs Brainfuck/NaiveInterpreter.hs
