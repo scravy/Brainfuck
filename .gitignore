@@ -6,3 +6,5 @@ SamB
 *.hi
 *.o
 .DS_Store
+*.swp
+
