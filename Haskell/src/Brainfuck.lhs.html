@@ -5,14 +5,20 @@
 <style>
   body, html { padding: 0; margin: 0 }  #nav { position: fixed; top: 0; right: 0; background: rgba(0,0,0,.5); color: white;         border-bottom-left-radius: 1em; margin: 0; padding: .5em; counter-reset: theLines; }
   #nav a { color: yellow; }
-  #code { width: 850px; margin: 1em auto 1em auto }
-  p { margin: .5em 0; line-height: 1.4em; text-align: justify }
+  code, pre, blockquote { font-family: 'Courier', 'Courier New', monospace; font-size: .83em }
+  #code { width: 750px; margin: 1em auto 1em auto }
+  p { text-align: justify }
+  p, ul, ol { margin: .5em 0; line-height: 1.4em }
   code { border-radius: .4em; background: #eeeeee; padding: .2em; }
   body { font-family: 'Helvetica', 'Arial', sans-serif }
+  blockquote span { display: block }
   pre { background: #f0f0f0; border: 1px solid black; padding: 0.5em; }
-  span { counter-increment: theLines }
-  span:before { content: counter(theLines); position: absolute;                 display: block; text-align: right;                margin-left: -3em; padding-right: 2em; color: gray; font-size: .83em }
-  #code:target > p { display: none }
+  pre span { counter-increment: theLines }
+  pre span:before { content: counter(theLines); position: absolute;                     display: block; text-align: right;                    margin-left: -3em; padding-right: 2em; margin-top: .2em;                    color: gray; font-size: .83em }
+  #code:target > * { display: none }
+  #code:target > h1 { display: block }
+  #code:target > h2 { display: block }
+  #code:target > h3 { display: block }
   #code:target > pre { display: block; border-top: 0px; border-bottom: 0px; margin: 0; }
   #code:target { margin: 0 auto 0 auto } 
 </style>
@@ -35,6 +41,10 @@ with the following Language Extensions:
 </pre>
 <p>We are using three helper functions:
 </p>
+<ul><li><code>getArgs</code> for retrieving the command line arguments, given to the program</li>
+<li><code>&lt;$&gt;</code> which is just a handy infix operator meaning <code>fmap</code></li>
+<li><code>nicify</code> which we can use to pretty print the AST of a brainfuck program</li>
+</ul>
 <pre><span>import System.Environment (getArgs)</span>
 <span>import Data.Functor ((&lt;$&gt;))</span>
 <span>import Text.Nicify (nicify)</span>
@@ -48,32 +58,32 @@ define a <code>Word</code> as <code>Integer</code> which may easily be replaced 
 </pre>
 <p>The main function of our program works as follows:
 </p>
+<ul><li>It retrieves the input supplied on STDIN via <code>getContents</code>,</li>
+<li>It maps every character into the <code>Word</code> type of the Brainfuck VM,</li>
+<li>It analyzes the command line arguments,</li>
+<li>parses the file (using the optimizer or not using the optimizer), and</li>
+<li>according to the arguments prints them or executes the program in the VM.</li>
+</ul>
 <pre><span>main :: IO ()</span>
 <span>main = do</span>
 <span>    stdin &lt;- map (fromIntegral . toInteger . fromEnum) &lt;$&gt; getContents</span>
-<span></span>
+
 <span>    getArgs &gt;&gt;= \case</span>
-<span>        ["-p", file] -&gt; parse file &gt;&gt;= printAST</span>
-<span></span>
-<span>        ["-o", file] -&gt; parse' file &gt;&gt;= printAST</span>
-<span></span>
-<span>        ["-s", file] -&gt; parse file &gt;&gt;= executeAST stdin</span>
-<span></span>
-<span>        [file] -&gt; parse' file &gt;&gt;= executeAST stdin</span>
-<span></span>
+<span>        ["-p", f] -&gt; parseBrainfuck &lt;$&gt; readFile f &gt;&gt;= printAST</span>
+
+<span>        ["-o", f] -&gt; parseBrainfuck' &lt;$&gt; readFile f &gt;&gt;= printAST</span>
+
+<span>        ["-s", f] -&gt; parseBrainfuck &lt;$&gt; readFile f &gt;&gt;= executeAST stdin</span>
+
+<span>        [f] -&gt; parseBrainfuck' &lt;$&gt; readFile f &gt;&gt;= executeAST stdin</span>
+
 <span>        _ -&gt; putStrLn $  "You need to specify exactly one argument: "</span>
 <span>                      ++ "The brainfuck script-file to execute."</span>
 </pre>
 <p>A few helper functions, so that we do not repeat ourselves too much:
 </p>
 <pre><span>  where</span>
-<span>    parse  = fmap parseBrainfuck  . readFile</span>
-<span>    parse' = fmap parseBrainfuck' . readFile</span>
-</pre>
-<p><code>parse'</code> and <code>parse</code> read the content of a file and parse it using
-the optimizing brainfuck parser <code>parseBrainfuck'</code> or the dumb one.
-</p>
-<pre><span>    printAST = either putStrLn (putStrLn . nicify. show)</span>
+<span>    printAST = either putStrLn (putStrLn . nicify. show)</span>
 </pre>
 <p><code>-p</code> and <code>-o</code> will print the abstract syntax tree. <code>printAST</code> will
 either print (<code>putStrLn</code>) an error message or <code>show</code> (<code>a -&gt; String</code>)
@@ -98,10 +108,10 @@ accumulator arguments to the actual functions which we are going to
 define later on:
 </p>
 <pre><span>parseBrainfuck, parseBrainfuck' :: String -&gt; Either String Program</span>
-<span></span>
+
 <span>parseBrainfuck' = fmap optimize . parseBrainfuck</span>
 <span>parseBrainfuck = parse [] []</span>
-<span></span>
+
 <span>runBrainfuck :: Input -&gt; Program -&gt; [Word]</span>
 <span>runBrainfuck input = exec (mkVM input)</span>
 </pre>
@@ -118,6 +128,12 @@ loops):
 </pre>
 <p>An actual Abstract Syntax Tree (<code>AST</code>) is either
 </p>
+<ul><li>an <code>Inc</code> operation (resembling <code>+</code> and <code>-</code>)</li>
+<li>a <code>Mem</code> operation which moved the memory pointer (<code>&gt;</code> and <code>&lt;</code>)</li>
+<li><code>Get</code> which retrieves a character as an integer from stdin (<code>,</code>)</li>
+<li><code>Put</code> which prints the current memory cell to stdin (<code>.</code>)</li>
+<li>or a Loop - which contains a program which is conditionally executed.</li>
+</ul>
 <p>Note that this structure is capable of holding optimized Brainfuck
 programs which do not <code>Inc</code> or <code>Mem</code> one but an arbitrary number of
 steps.
@@ -133,6 +149,8 @@ steps.
 <p>The above definition uses GADT Syntax (Generalized Algebraic Data Types).
 Without <code>-XGADTs</code> this might be expressed in Standard Haskell as follows:
 </p>
+<blockquote><span>    data AST = Inc Word | Mem Word | Get | Put | Loop Program</span>
+</blockquote>
 <p>The parser is a recursive functions that iterates on its input until
 nothing is left. Since the Brainfuck script might be malformed
 (mismatched braces) it returns either a <code>String</code> or a <code>Program</code>.
@@ -160,28 +178,46 @@ Given a Brainfuck program (Like <code>,+[-.,+]</code>, which is the shortest
 characters until we hit a loop (<code>[-.,+]</code>). That loop is actually a
 subprogram to parse:
 </p>
+<blockquote><span>    parse ",+[-.,]+"</span>
+</blockquote>
 <p>results in "I got <code>,+</code> so far, now parse the subprogram."
 </p>
 <p>The parser then pushes what we got so far onto the stack:
 </p>
+<blockquote><span>    [ Get , Inc 1 ]</span>
+</blockquote>
 <p>and goes on parsing the subprogram as if it was an ordinary program.
 When reaching the end of the subprogram (= the end of the loop, <code>]</code>)
 we push the subprogram into the topmost 'super program':
 </p>
+<blockquote><span>    [ Get , Inc 1 , Loop [ ... ] ]</span>
+</blockquote>
 <p>If the parser were to parse "++[.,[,]-]" it would do
 </p>
+<blockquote><span>    parse "++[.,[,]-]"</span>
+</blockquote>
 <p>which results in
 </p>
+<blockquote><span>    [ Get , Put ]</span>
+<span>    [ Inc 1 , Inc 1 ]</span>
+</blockquote>
 <p>reading the subprogram ",". Encountering <code>]</code> it will then push
 the subprogram <code>[ Get ]</code> we just read into the topmost program
 as a subprogam (a <code>Loop</code>):
 </p>
+<blockquote><span>    [ Get , Put , Loop [ Get ] ]</span>
+<span>    [ Inc 1 , Inc 1 ]</span>
+</blockquote>
 <p>At the end we are left with an empty stack of programs and the
 complete program:
 </p>
+<blockquote><span>    [ Inc 1 , Inc 1 , Loop [ Get , Put , Loop [ Get ] , Inc (-1) ] ]</span>
+</blockquote>
 <p>This technique is known as shift-reduce parsing
 (push on the stack, combine with topmost;
 </p>
+<blockquote><span> or: shift through the input, fold ("reduce") into a Tree).</span>
+</blockquote>
 <p>See http://en.wikipedia.org/wiki/Shift-reduce_parser
 </p>
 <p>Here is the implementation:
@@ -190,7 +226,7 @@ complete program:
 actually contains a character or does not contain anything anymore:
 </p>
 <pre><span>parse blocks block = \case</span>
-<span></span>
+
 <span>    x : xs -&gt; case x of</span>
 </pre>
 <p>In case of the 6 easy commands, we just go on (<code>next</code>), putting the
@@ -232,6 +268,8 @@ without changing any of the given arguments (<code>blocks</code> and <code>block
 </pre>
 <p><code>next</code> is defined as "prepend the new command to the current block
 </p>
+<blockquote><span>                      and go on parsing the rest":</span>
+</blockquote>
 <pre><span>      where</span>
 <span>        next = \cmd -&gt; parse blocks (cmd : block) xs</span>
 </pre>
@@ -302,6 +340,9 @@ basically endless in both directions).
 </p>
 <p>This is how you might model the Brainfuck VM's Memory:
 </p>
+<blockquote><span>    0 0 0 0 4 8 9 0 3 0 3 1 0</span>
+<span>                ^</span>
+</blockquote>
 <p>It is finite (there are bounds left and right) and there is a
 pointer pointing at the current cell. An imperative program would
 then just change that cell the pointer is pointing at.
@@ -309,9 +350,17 @@ then just change that cell the pointer is pointing at.
 <p>We use a different approach: The Brainfuck Memory is actually
 three things:
 </p>
+<ol><li>The current cell</li>
+<li>The memory in front of the current cell</li>
+<li>The memory behind the current cell</li>
+</ol>
 <p>These might be modeled as lists. So the above memory instance
 would become:
 </p>
+<ol><li>9</li>
+<li><code>[ 8, 4, .. ]</code> (preceeding)</li>
+<li><code>[ 0, 3, 0, 3, 1, .. ]</code> (following)</li>
+</ol>
 <p>Note that the dots imply that the list might be infinitely large
 (the rest is assumed to be zeros).
 </p>
@@ -333,50 +382,50 @@ call stack using a given input like so:
 its output (a list of <code>Word</code>s that were put using <code>Put</code> (<code>.</code> in BF)).
 </p>
 <pre><span>exec :: VM -&gt; Program -&gt; [Word]</span>
-<span></span>
+
 <span>exec vm@(VM { .. }) (command : commands) = case command of</span>
-<span></span>
+
 <span>    Inc n -&gt; next (updateMemory (upd (+ n)) vm)</span>
-<span></span>
+
 <span>    Mem n -&gt; next (updateMemory (move n)    vm)</span>
-<span></span>
+
 <span>    Get</span>
 <span>      | null input -&gt; []</span>
 <span>      | otherwise  -&gt; next (updateInput tail . updateMemory (upd (const (head input))) $ vm)</span>
-<span></span>
+
 <span>    Put -&gt; cell : next vm</span>
-<span></span>
+
 <span>    Loop commands'</span>
 <span>      | cell == 0 -&gt; next vm</span>
 <span>      | otherwise -&gt; exec (vm { callStack = commands' : commands : callStack }) commands'</span>
-<span></span>
+
 <span>  where</span>
 <span>    next = \vm' -&gt; exec vm' commands</span>
-<span></span>
+
 <span>    (_, cell, _) = memory</span>
-<span></span>
+
 <span>    upd f (lc, cc, rc) = (lc, f cc, rc)</span>
-<span></span>
+
 <span>    move n mem@(lc, cc, rc)</span>
 <span>      | n &gt; 0     = move (n - 1) (cc : lc, safeHead 0 rc, drop 1 rc)</span>
 <span>      | n &lt; 0     = move (n + 1) (drop 1 lc, safeHead 0 lc, cc : rc)</span>
 <span>      | otherwise = mem</span>
-<span></span>
+
 <span>    safeHead def = \case</span>
 <span>        x : _ -&gt; x</span>
 <span>        _     -&gt; def</span>
-<span></span>
+
 <span>    updateMemory f vm@(VM { .. }) = vm { memory = f memory }</span>
 <span>    updateInput  f vm@(VM { .. }) = vm { input  = f input }</span>
-<span></span>
+
 <span>exec vm@(VM { .. }) [] = case callStack of</span>
-<span></span>
+
 <span>    commands : commands' : callStack'</span>
 <span>      | cell == 0 -&gt; exec (vm { callStack = callStack' }) commands'</span>
 <span>      | otherwise -&gt; exec vm commands</span>
-<span></span>
+
 <span>    _ -&gt; []</span>
-<span></span>
+
 <span>  where</span>
 <span>    (_, cell, _) = memory</span>
 </pre>

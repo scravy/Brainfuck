@@ -11,7 +11,7 @@ build-type:          Simple
 -- extra-source-files:  
 cabal-version:       >=1.10
 
-executable Brainfuck
+executable bf
   main-is:             Brainfuck.lhs
   other-extensions:    Haskell2010, LambdaCase, NegativeLiterals, GADTs, RecordWildCards
   build-depends:       base >=4.7 && <4.8, nicify >=1.1 && <1.2

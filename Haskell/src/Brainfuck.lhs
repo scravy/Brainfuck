@@ -41,13 +41,13 @@ The main function of our program works as follows:
 >     stdin <- map (fromIntegral . toInteger . fromEnum) <$> getContents
 > 
 >     getArgs >>= \case
->         ["-p", file] -> parse file >>= printAST
+>         ["-p", f] -> parseBrainfuck <$> readFile f >>= printAST
 > 
->         ["-o", file] -> parse' file >>= printAST
+>         ["-o", f] -> parseBrainfuck' <$> readFile f >>= printAST
 > 
->         ["-s", file] -> parse file >>= executeAST stdin
+>         ["-s", f] -> parseBrainfuck <$> readFile f >>= executeAST stdin
 > 
->         [file] -> parse' file >>= executeAST stdin
+>         [f] -> parseBrainfuck' <$> readFile f >>= executeAST stdin
 > 
 >         _ -> putStrLn $  "You need to specify exactly one argument: "
 >                       ++ "The brainfuck script-file to execute."
@@ -55,12 +55,6 @@ The main function of our program works as follows:
 A few helper functions, so that we do not repeat ourselves too much:
 
 >   where
->     parse  = fmap parseBrainfuck  . readFile
->     parse' = fmap parseBrainfuck' . readFile
-
-`parse'` and `parse` read the content of a file and parse it using
-the optimizing brainfuck parser `parseBrainfuck'` or the dumb one.
-
 >     printAST = either putStrLn (putStrLn . nicify. show)
 
 `-p` and `-o` will print the abstract syntax tree. `printAST` will

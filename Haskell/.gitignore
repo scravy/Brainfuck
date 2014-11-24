@@ -1,3 +1,8 @@
 *.o
 Brainfuck
 *.hi
+*.o
+*.hi
+.DS_Store
+.*.swp
+dist
