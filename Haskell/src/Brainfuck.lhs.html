@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <meta charset='UTF-8'>
+<style>
+  body, html { padding: 0; margin: 0 }  #nav { position: fixed; top: 0; right: 0; background: rgba(0,0,0,.5); color: white;         border-bottom-left-radius: 1em; margin: 0; padding: .5em; counter-reset: theLines; }
+  #nav a { color: yellow; }
+  #code { width: 850px; margin: 1em auto 1em auto }
+  p { margin: .5em 0; line-height: 1.4em; text-align: justify }
+  code { border-radius: .4em; background: #eeeeee; padding: .2em; }
+  body { font-family: 'Helvetica', 'Arial', sans-serif }
+  pre { background: #f0f0f0; border: 1px solid black; padding: 0.5em; }
+  span { counter-increment: theLines }
+  span:before { content: counter(theLines); position: absolute;                 display: block; text-align: right;                margin-left: -3em; padding-right: 2em; color: gray; font-size: .83em }
+  #code:target > p { display: none }
+  #code:target > pre { display: block; border-top: 0px; border-bottom: 0px; margin: 0; }
+  #code:target { margin: 0 auto 0 auto } 
+</style>
+</head>
+<body>
+<p id='nav'>
+<a href='#'>Show all</a> | <a href='#code'>Show only code</a>
+</p>
+<div id='code'>
+<h1>A Brainfuck Interpreter in Haskell</h1>
+<p>This is a tiny brainfuck interpreter, writte in Haskell,
+with the following Language Extensions:
+</p>
+<pre><span>{-# LANGUAGE Haskell2010, LambdaCase, NegativeLiterals, GADTs, RecordWildCards #-}</span>
+</pre>
+<p>In order to be rebuked by GHC, we order it to warn us about anything
+(except when a variable name is reused in some subordinate scope):
+</p>
+<pre><span>{-# OPTIONS_GHC -Wall -fno-warn-name-shadowing #-}</span>
+</pre>
+<p>We are using three helper functions:
+</p>
+<pre><span>import System.Environment (getArgs)</span>
+<span>import Data.Functor ((&lt;$&gt;))</span>
+<span>import Text.Nicify (nicify)</span>
+</pre>
+<p>The memory of the brainfuck machine is all integers. According to the brainfuck
+specification those should be BigIntegers, but we might want to change that to
+native integers (which do overflow) in order go gain performance. Therefore we
+define a <code>Word</code> as <code>Integer</code> which may easily be replaced with <code>Int64</code> or <code>Int</code>.
+</p>
+<pre><span>type Word = Integer</span>
+</pre>
+<p>The main function of our program works as follows:
+</p>
+<pre><span>main :: IO ()</span>
+<span>main = do</span>
+<span>    stdin &lt;- map (fromIntegral . toInteger . fromEnum) &lt;$&gt; getContents</span>
+<span></span>
+<span>    getArgs &gt;&gt;= \case</span>
+<span>        ["-p", file] -&gt; parse file &gt;&gt;= printAST</span>
+<span></span>
+<span>        ["-o", file] -&gt; parse' file &gt;&gt;= printAST</span>
+<span></span>
+<span>        ["-s", file] -&gt; parse file &gt;&gt;= executeAST stdin</span>
+<span></span>
+<span>        [file] -&gt; parse' file &gt;&gt;= executeAST stdin</span>
+<span></span>
+<span>        _ -&gt; putStrLn $  "You need to specify exactly one argument: "</span>
+<span>                      ++ "The brainfuck script-file to execute."</span>
+</pre>
+<p>A few helper functions, so that we do not repeat ourselves too much:
+</p>
+<pre><span>  where</span>
+<span>    parse  = fmap parseBrainfuck  . readFile</span>
+<span>    parse' = fmap parseBrainfuck' . readFile</span>
+</pre>
+<p><code>parse'</code> and <code>parse</code> read the content of a file and parse it using
+the optimizing brainfuck parser <code>parseBrainfuck'</code> or the dumb one.
+</p>
+<pre><span>    printAST = either putStrLn (putStrLn . nicify. show)</span>
+</pre>
+<p><code>-p</code> and <code>-o</code> will print the abstract syntax tree. <code>printAST</code> will
+either print (<code>putStrLn</code>) an error message or <code>show</code> (<code>a -&gt; String</code>)
+the AST, pretty print if (<code>nicify :: String -&gt; String</code>) and put it
+to the screen (<code>putStrLn</code>).
+</p>
+<pre><span>    executeAST input = either putStrLn (mapM_ printChar . runBrainfuck input)</span>
+</pre>
+<p><code>executeAST</code> works just as <code>printAST</code>, just that instead of pretty
+printing and showing the AST it will execute it using the given <code>input</code>
+and print every resulting character (<code>mapM_</code> is <code>map</code> on monads discarding
+the result (<code>mapM :: [m a] -&gt; m [a]</code> whereas <code>mapM_ :: [m a] -&gt; m ()</code>).
+</p>
+<p>We ignore the result since we are only interested in the side effects
+(induced by <code>putStrLn :: String -&gt; IO ()</code>. The result type <code>IO ()</code> merely
+means "this function is performing IO").
+</p>
+<pre><span>    printChar = putStr . return . toEnum . fromIntegral</span>
+</pre>
+<p>A few more helper functions which get rid of the need to supply the
+accumulator arguments to the actual functions which we are going to
+define later on:
+</p>
+<pre><span>parseBrainfuck, parseBrainfuck' :: String -&gt; Either String Program</span>
+<span></span>
+<span>parseBrainfuck' = fmap optimize . parseBrainfuck</span>
+<span>parseBrainfuck = parse [] []</span>
+<span></span>
+<span>runBrainfuck :: Input -&gt; Program -&gt; [Word]</span>
+<span>runBrainfuck input = exec (mkVM input)</span>
+</pre>
+<p>Let's write a Brainfuck Interpreter!
+</p>
+<h2>A Brainfuck Parser</h2>
+<p>First we define the types needed for parsing a Brainfuck Script.
+</p>
+<p>A <code>Program</code> consists of a Sequence of Steps, which we will model
+as Abstract Syntax Trees (after all Brainfuck programs may contain
+loops):
+</p>
+<pre><span>type Program = [AST]</span>
+</pre>
+<p>An actual Abstract Syntax Tree (<code>AST</code>) is either
+</p>
+<p>Note that this structure is capable of holding optimized Brainfuck
+programs which do not <code>Inc</code> or <code>Mem</code> one but an arbitrary number of
+steps.
+</p>
+<pre><span>data AST where</span>
+<span>    Inc  :: Word -&gt; AST</span>
+<span>    Mem  :: Word -&gt; AST</span>
+<span>    Get  :: AST</span>
+<span>    Put  :: AST</span>
+<span>    Loop :: Program -&gt; AST</span>
+<span>  deriving (Show)</span>
+</pre>
+<p>The above definition uses GADT Syntax (Generalized Algebraic Data Types).
+Without <code>-XGADTs</code> this might be expressed in Standard Haskell as follows:
+</p>
+<p>The parser is a recursive functions that iterates on its input until
+nothing is left. Since the Brainfuck script might be malformed
+(mismatched braces) it returns either a <code>String</code> or a <code>Program</code>.
+</p>
+<p>Brainfuck has a fairly simple syntax. There are 8 control characters
+of which only two pose a problem to parsing. ".,+-&gt;&lt;" can be translated
+into <code>Put</code>, <code>Get</code>, <code>Inc 1</code> (<code>Inc -1</code> respectively) and <code>Mem 1</code> (<code>Mem -1</code>).
+</p>
+<p>Note that Standard Haskell requires you to enclose negative literals in
+parenthesis. We avoid that using <code>-XNegativeLiterals</code>.
+</p>
+<p>Whenever we encounter an opening rectangular bracket (<code>[</code>) we parse
+a new subprogram. Everything we know so far is being pushed on the
+first accumulator (a stack of 'super programs', <code>[Program]</code>).
+</p>
+<p>The second accumulator holds the program we read so far.
+</p>
+<p>The third argument is simply the list containing the script.
+</p>
+<pre><span>parse :: [Program] -&gt; Program -&gt; String -&gt; Either String Program</span>
+</pre>
+<p>Our strategy for parsing a brainfuck program is as follows:
+Given a Brainfuck program (Like <code>,+[-.,+]</code>, which is the shortest
+<code>cat</code> that ever was or will be), we parse the ordinary control
+characters until we hit a loop (<code>[-.,+]</code>). That loop is actually a
+subprogram to parse:
+</p>
+<p>results in "I got <code>,+</code> so far, now parse the subprogram."
+</p>
+<p>The parser then pushes what we got so far onto the stack:
+</p>
+<p>and goes on parsing the subprogram as if it was an ordinary program.
+When reaching the end of the subprogram (= the end of the loop, <code>]</code>)
+we push the subprogram into the topmost 'super program':
+</p>
+<p>If the parser were to parse "++[.,[,]-]" it would do
+</p>
+<p>which results in
+</p>
+<p>reading the subprogram ",". Encountering <code>]</code> it will then push
+the subprogram <code>[ Get ]</code> we just read into the topmost program
+as a subprogam (a <code>Loop</code>):
+</p>
+<p>At the end we are left with an empty stack of programs and the
+complete program:
+</p>
+<p>This technique is known as shift-reduce parsing
+(push on the stack, combine with topmost;
+</p>
+<p>See http://en.wikipedia.org/wiki/Shift-reduce_parser
+</p>
+<p>Here is the implementation:
+</p>
+<p>The parser distinguishes whether its input argument (the script)
+actually contains a character or does not contain anything anymore:
+</p>
+<pre><span>parse blocks block = \case</span>
+<span></span>
+<span>    x : xs -&gt; case x of</span>
+</pre>
+<p>In case of the 6 easy commands, we just go on (<code>next</code>), putting the
+command read in the program (see the definition of <code>next</code>).
+</p>
+<pre><span>        '.' -&gt; next $ Put</span>
+<span>        ',' -&gt; next $ Get</span>
+<span>        '+' -&gt; next $ Inc 1</span>
+<span>        '-' -&gt; next $ Inc -1</span>
+<span>        '&gt;' -&gt; next $ Mem 1</span>
+<span>        '&lt;' -&gt; next $ Mem -1</span>
+</pre>
+<p>In case of the opening rectangular bracket (<code>[</code>) we take the current
+program (<code>block</code>) and push it onto the first accumulator. The now following
+subprogram is yet empty (<code>[]</code>). Read the rest (<code>xs</code>).
+</p>
+<pre><span>        '[' -&gt; parse (block : blocks) [] xs</span>
+</pre>
+<p>A closing bracket poses a challenge. If we do not have any 'super programs'
+we have nothing to continue parsing on (this is the case when there is a
+closing bracket with no opening one preceeding it).
+</p>
+<p>In all other cases (<code>otherwise</code>) we use the tail of the current stack of
+'super programs' and continue on the head.
+</p>
+<p>Note since that lists in Haskell allow only for efficient appending at
+the front we have to reverse the block which defines the <code>Loop</code> which
+is now completely read.
+</p>
+<pre><span>        ']'</span>
+<span>          | null blocks -&gt; fail "encountered closing brace while there is no opening one"</span>
+<span>          | otherwise   -&gt; parse (tail blocks) (Loop (reverse block) : head blocks) xs</span>
+</pre>
+<p>Every character that is not one of the 8 control characters of Brainfuck
+is ignored and we just continue parsing the rest (<code>xs</code>) of the script
+without changing any of the given arguments (<code>blocks</code> and <code>block</code>).
+</p>
+<pre><span>        _ -&gt; parse blocks block xs</span>
+</pre>
+<p><code>next</code> is defined as "prepend the new command to the current block
+</p>
+<pre><span>      where</span>
+<span>        next = \cmd -&gt; parse blocks (cmd : block) xs</span>
+</pre>
+<p>When we run out of characters ('end of file', 'the empty script')
+we check whether there are <code>blocks</code> remaining (everything is fine
+if the stack of 'super programs' is empty). If there are super programs
+remaining we are stuck in an unclosed loop.
+</p>
+<pre><span>    _</span>
+<span>      | null blocks -&gt; return (reverse block)</span>
+<span>      | otherwise   -&gt; fail "unclosed open braces left"</span>
+</pre>
+<p>That is the complete parser which turns a
+<code>String</code> (a list of characters, <code>[Char]</code>)
+into a <code>Program</code>.
+</p>
+<h2>The Optimizer</h2>
+<p>Brainfuck programs are utterly inefficient. Part of that
+stems from the fact that there is no way of expressing
+"add 17 to the current memory cell" (you do "add 1" 17 times).
+We can do better by optimizing our program.
+</p>
+<pre><span>optimize :: Program -&gt; Program</span>
+</pre>
+<p>The optimizer combines adjacent <code>Inc</code> and <code>Mem</code> operations:
+</p>
+<pre><span>optimize = \case</span>
+<span>    Inc n : Inc m : zs -&gt; optimize $ Inc (n + m) : zs</span>
+<span>    Mem n : Mem m : zs -&gt; optimize $ Mem (n + m) : zs</span>
+</pre>
+<p>Note that <code>$</code> is just an infix operator doing function application
+(<code>($) :: (a -&gt; b) -&gt; a -&gt; b</code>). Haskell programmers typically use <code>$</code>
+to get rid of too many distracting (annoying?) parenthesis.
+</p>
+<p>So <code>optimize $ ...</code> is really the same thing as <code>optimize (...)</code>.
+</p>
+<p>In case of a loop it recursively descends into that subprogram:
+</p>
+<pre><span>    Loop xs : zs       -&gt; Loop (optimize xs) : optimize zs</span>
+</pre>
+<p>In all other cases it leaves the current command untouched (<code>z</code>)
+and proceeds optimizing the rest (<code>optimize zs</code>).
+</p>
+<pre><span>    z : zs             -&gt; z : optimize zs</span>
+</pre>
+<p>Everything else (the only matching case is [] actually) results
+in the empty program (<code>[]</code>, since programs are defined as lists of ASTs).
+</p>
+<pre><span>    _                  -&gt; []</span>
+</pre>
+<p>That was fun! We are now able to parse a Brainfuck script into a
+<code>Program</code> and we even optimize it.
+</p>
+<h2>The Brainfuck Virtual Machine</h2>
+<p>A Brainfuck script executes on the Brainfuck VM, which consists of
+a memory, an input, and a call stack.
+</p>
+<pre><span>data VM = VM {</span>
+<span>    memory    :: Memory</span>
+<span>  , input     :: Input</span>
+<span>  , callStack :: [Program]</span>
+<span> }</span>
+</pre>
+<p>While in most imperative languages one would model the memory as
+a mutable array, we do not do that in Haskell. Also the Brainfuck
+specification does not impose any limits on the memory (it is
+basically endless in both directions).
+</p>
+<p>This is how you might model the Brainfuck VM's Memory:
+</p>
+<p>It is finite (there are bounds left and right) and there is a
+pointer pointing at the current cell. An imperative program would
+then just change that cell the pointer is pointing at.
+</p>
+<p>We use a different approach: The Brainfuck Memory is actually
+three things:
+</p>
+<p>These might be modeled as lists. So the above memory instance
+would become:
+</p>
+<p>Note that the dots imply that the list might be infinitely large
+(the rest is assumed to be zeros).
+</p>
+<p>Here is how we might write that model down in Haskell:
+</p>
+<pre><span>type Memory = ([Word], Word, [Word])</span>
+</pre>
+<p>The input is just a list of <code>Word</code>s:
+</p>
+<pre><span>type Input = [Word]</span>
+</pre>
+<p>We may define a factory for creating VMs with an empty memory and empty
+call stack using a given input like so:
+</p>
+<pre><span>mkVM :: Input -&gt; VM</span>
+<span>mkVM input = VM { memory = ([], 0, []), input = input, callStack = [] }</span>
+</pre>
+<p>Running the Brainfuck VM takes an existing VM and a Program, returning
+its output (a list of <code>Word</code>s that were put using <code>Put</code> (<code>.</code> in BF)).
+</p>
+<pre><span>exec :: VM -&gt; Program -&gt; [Word]</span>
+<span></span>
+<span>exec vm@(VM { .. }) (command : commands) = case command of</span>
+<span></span>
+<span>    Inc n -&gt; next (updateMemory (upd (+ n)) vm)</span>
+<span></span>
+<span>    Mem n -&gt; next (updateMemory (move n)    vm)</span>
+<span></span>
+<span>    Get</span>
+<span>      | null input -&gt; []</span>
+<span>      | otherwise  -&gt; next (updateInput tail . updateMemory (upd (const (head input))) $ vm)</span>
+<span></span>
+<span>    Put -&gt; cell : next vm</span>
+<span></span>
+<span>    Loop commands'</span>
+<span>      | cell == 0 -&gt; next vm</span>
+<span>      | otherwise -&gt; exec (vm { callStack = commands' : commands : callStack }) commands'</span>
+<span></span>
+<span>  where</span>
+<span>    next = \vm' -&gt; exec vm' commands</span>
+<span></span>
+<span>    (_, cell, _) = memory</span>
+<span></span>
+<span>    upd f (lc, cc, rc) = (lc, f cc, rc)</span>
+<span></span>
+<span>    move n mem@(lc, cc, rc)</span>
+<span>      | n &gt; 0     = move (n - 1) (cc : lc, safeHead 0 rc, drop 1 rc)</span>
+<span>      | n &lt; 0     = move (n + 1) (drop 1 lc, safeHead 0 lc, cc : rc)</span>
+<span>      | otherwise = mem</span>
+<span></span>
+<span>    safeHead def = \case</span>
+<span>        x : _ -&gt; x</span>
+<span>        _     -&gt; def</span>
+<span></span>
+<span>    updateMemory f vm@(VM { .. }) = vm { memory = f memory }</span>
+<span>    updateInput  f vm@(VM { .. }) = vm { input  = f input }</span>
+<span></span>
+<span>exec vm@(VM { .. }) [] = case callStack of</span>
+<span></span>
+<span>    commands : commands' : callStack'</span>
+<span>      | cell == 0 -&gt; exec (vm { callStack = callStack' }) commands'</span>
+<span>      | otherwise -&gt; exec vm commands</span>
+<span></span>
+<span>    _ -&gt; []</span>
+<span></span>
+<span>  where</span>
+<span>    (_, cell, _) = memory</span>
+</pre>
