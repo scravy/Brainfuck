@@ -28,6 +28,7 @@
 <a href='#'>Show all</a> | <a href='#code'>Show only code</a>
 </p>
 <div id='code'>
+<p></p>
 <h1>A Brainfuck Interpreter in Haskell</h1>
 <p>This is a tiny brainfuck interpreter, writte in Haskell,
 with the following Language Extensions:
@@ -117,6 +118,7 @@ define later on:
 </pre>
 <p>Let's write a Brainfuck Interpreter!
 </p>
+<p></p>
 <h2>A Brainfuck Parser</h2>
 <p>First we define the types needed for parsing a Brainfuck Script.
 </p>
@@ -286,6 +288,7 @@ remaining we are stuck in an unclosed loop.
 <code>String</code> (a list of characters, <code>[Char]</code>)
 into a <code>Program</code>.
 </p>
+<p></p>
 <h2>The Optimizer</h2>
 <p>Brainfuck programs are utterly inefficient. Part of that
 stems from the fact that there is no way of expressing
@@ -323,6 +326,7 @@ in the empty program (<code>[]</code>, since programs are defined as lists of AS
 <p>That was fun! We are now able to parse a Brainfuck script into a
 <code>Program</code> and we even optimize it.
 </p>
+<p></p>
 <h2>The Brainfuck Virtual Machine</h2>
 <p>A Brainfuck script executes on the Brainfuck VM, which consists of
 a memory, an input, and a call stack.
@@ -429,3 +433,5 @@ its output (a list of <code>Word</code>s that were put using <code>Put</code> (<
 <span>  where</span>
 <span>    (_, cell, _) = memory</span>
 </pre>
+</body>
+</html>
