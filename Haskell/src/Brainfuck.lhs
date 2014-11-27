@@ -38,6 +38,8 @@ The main function of our program works as follows:
 >         ("-h" : _) -> putStr $ "  -p  Pretty print the parse tree\n"
 >                             ++ "  -o  Pretty print the optimized parse tree\n"
 >                             ++ "  -s  Run slow (does not perform any optimizations)\n"
+>                             ++ "  -h  this help\n"
+>                             ++ "  -v  print version information\n"
 >
 >         ["-p", f] -> parseBrainfuck <$> readFile f >>= printAST
 > 
