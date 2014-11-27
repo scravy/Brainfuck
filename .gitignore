@@ -8,3 +8,6 @@ SamB
 .DS_Store
 *.swp
 bf
+.classpath
+.project
+.settings
