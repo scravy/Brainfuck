@@ -1,21 +1,24 @@
 #include "stdio.h"
 #include "stdlib.h"
 
-#define VERSION "v2011-05-18 11:24 CET -- brainfuck interpreter by tiredness can kill at warhog dot net"
+#define VERSION "Thu Nov 27 04:13:16 CET 2014 -- brainfuck interpreter by tiredness can kill at warhog dot net"
 
 #define MEM 30000
 #define BUF 4096
-#define STK 1024
 
-int main(int argc, char** argv) {
+#define OPT_COMPILE 2
+#define OPT_WRAP 4
+#define OPT_OOK 8
+#define OPT_NO_PARENTHESIS_CHECK 16
+
+int main(int argc, char** argv)
+{    
 	char* code = 0;
 	long length = 0;
 	long buf = BUF;
 	long max = MEM;
-	long stk = STK;
-	int* stack = 0;
 	int* memory = 0;
-	char extensions = 0;
+	char options = 0;
 	
 	int i;
 	char* file = 0;
@@ -35,25 +38,18 @@ int main(int argc, char** argv) {
 				while (code[length] != '\0') {
 					length++;
 				}
-			} else if (n == 'x') {
-				extensions |= 1;
-			} else if (n == 's') {
-				extensions |= 1;
-				stk = atoi(argv[++i]);
 			} else if (n == 'c') {
-				extensions |= 2;
+				options |= OPT_COMPILE;
 			} else if (n == 'w') {
-				extensions |= 4;
+				options |= OPT_WRAP;
 			} else if (n == 'o') {
-				extensions |= 8;
+				options |= OPT_OOK;
 			} else if (n == 'p') {
-				extensions |= 32;
+				options |= OPT_NO_PARENTHESIS_CHECK;
 			} else if (n == 'h') {
 				printf("  -%c  %s %i\n", 'm', "memory size - defaults to", MEM);
 				printf("  -%c  %s\n", 'b', "buffer size (for reading from stdin)");
 				printf("  -%c  %s\n", 'r', "run piece of code from command line arguments");
-				printf("  -%c  %s\n", 'x', "enables extensions (@${}=#_*/%&|^?;~!)");
-				printf("  -%c  %s\n", 's', "stack size (implies -x)");
 				printf("  -%c  %s\n", 'o', "translate to ook!");
 				printf("  -%c  %s\n", 'c', "create c code");
 				printf("  -%c  %s\n", 'w', "wrap pointer (only with -c)");
@@ -96,7 +92,7 @@ int main(int argc, char** argv) {
 	if (code) {
 		int max1, p, sp, c = 0;
 		
-		if (!(extensions & 32)) {
+		if (!(options & OPT_NO_PARENTHESIS_CHECK)) {
 			for (i = 0; i < length; i++) {
 				if (code[i] == '[') c++;
 				if (code[i] == ']') c--;
@@ -105,7 +101,7 @@ int main(int argc, char** argv) {
 			if (c != 0) return 1;
 		}
 		
-		if (extensions & 8) {
+		if (options & OPT_OOK) {
 			for (i = 0; i < length; i++) {
 				switch (code[i]) {
 				case '>': printf("Ook. Ook? "); break;
@@ -123,7 +119,7 @@ int main(int argc, char** argv) {
 			if (c % 8) printf("\n");
 			return 0;
 		}
-		if (extensions & 2) {
+		if (options & OPT_COMPILE) {
 			printf("%s\n\n",    "#include \"stdio.h\"");
 			printf("%s\n\n",    "#include \"stdlib.h\"");
 			printf("%s\n",      "int main() {");
@@ -139,12 +135,12 @@ int main(int argc, char** argv) {
 				if (code[i] != p) {
 					if (p == '+') {
 						printf("\tmemory[p] += %i;\n", c);
-						if (extensions & 4) {
+						if (options & 4) {
 							printf("\tmemory[p] %%= %li;\n", max);
 						}
 						c = 0;
 					} else if (p == '-') {
-						if (extensions & 4) {
+						if (options & 4) {
 							printf("\tmemory[p] += %li;\n", max - c);
 							printf("\tmemory[p] %%= %li;\n", max);
 						} else {
@@ -187,8 +183,9 @@ int main(int argc, char** argv) {
 			return 0;	
 		}
 		
-		if (!(memory = malloc(max))) return 3;
-		if (extensions & 1) if (!(stack = malloc(stk))) return 3;
+		if (!(memory = malloc(max))) {
+            return 3;
+        }
 		
 		max1 = max - 1;
 		p = 0;
@@ -243,78 +240,7 @@ int main(int argc, char** argv) {
 				}
 				break;
 			default:
-				if (extensions & 1) {
-#define push(x) stack[sp++] = x
-#define pop()   stack[--sp]
-					switch (code[i]) {
-					case '$':
-						printf("%c", '\n');
-						break;
-					case '@':
-						printf("%i", memory[p]);
-						break;
-					case '{':
-						push(memory[p]);
-						break;
-					case '}':
-						memory[p] = pop();
-						break;
-					case '*':
-						c = pop();
-						memory[p] = c * pop();
-						break;
-					case '/':
-						c = pop();
-						memory[p] = pop();
-						if (memory[p] != 0) {
-							memory[p] /= c;
-						}
-						break;
-					case '=':
-						c = pop();
-						memory[p] = c == pop();
-						break;
-					case '\\':
-					case '%':
-						c = pop();
-						memory[p] = pop();
-						if (memory[p] != 0) {
-							memory[p] %= c;
-						}
-						break;
-					case '&':
-						c = pop();
-						memory[p] = c & pop();
-						break;
-					case '|':
-						c = pop();
-						memory[p] = c | pop();
-						break;
-					case '^':
-						c = pop();
-						memory[p] = c ^ pop();
-						break;
-					case '#':
-						c = pop();
-						memory[p] = c + pop();
-						break;
-					case '_':
-						c = pop();
-						memory[p] = c - pop();
-						break;
-					case '?':
-						memory[p] = sp > 0;
-						break;
-					case ';':
-						i += memory[p] - 1;
-						break;
-					case '~':
-						p = 0;
-						break;
-					case '!':
-						return memory[p] % 256;
-					}
-				}
+                continue;
 			}
 		}
 	}

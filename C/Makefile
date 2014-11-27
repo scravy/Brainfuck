@@ -14,19 +14,11 @@ helloworld: helloworld.c
 prime: prime.c
 	$(CC) $(FLAGS) -o $@ $<
 
-helloworld.c: scripts/helloworld.bf bf
+helloworld.c: ../_scripts/helloworld.bf bf
 	./bf -c $< > $@
 
-prime.c: scripts/prime.bf bf
+prime.c: ../_scripts/prime.bf bf
 	./bf -c $< > $@
-
-haskell: Naive SamB
-
-Naive: Brainfuck/Naive.hs Brainfuck/NaiveInterpreter.hs
-	ghc --make Brainfuck/NaiveInterpreter.hs -o Naive
-
-SamB: Brainfuck/SamB.hs
-	ghc --make Brainfuck/SamB.hs -o SamB
 
 clean:
 	rm -f bf
@@ -34,8 +26,5 @@ clean:
 	rm -f helloworld.c
 	rm -f prime
 	rm -f prime.c
-	rm -f Brainfuck/*.o Brainfuck/*.hi
-	rm -f Naive
-	rm -f SamB
 
 .PHONY: clean
