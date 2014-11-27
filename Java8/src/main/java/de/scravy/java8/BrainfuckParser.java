@@ -6,13 +6,12 @@ public class BrainfuckParser {
 
 		private static final long serialVersionUID = -5921265904576187667L;
 
-		public ParseException(String message) {
+		public ParseException(final String message) {
 			super(message);
 		}
-		
 	}
-	
-	public BrainfuckAST parse(final byte[] data) {
+
+	public BrainfuckScript parse(final byte[] data) throws ParseException {
 		return null;
 	}
 }

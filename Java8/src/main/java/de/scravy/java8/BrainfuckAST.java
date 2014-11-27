@@ -2,32 +2,41 @@ package de.scravy.java8;
 
 import java.util.List;
 
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 
-public interface BrainfuckAST {
+public abstract class BrainfuckAST {
+
+	private BrainfuckAST() {
+	}
 
 	@Value
-	class Inc implements BrainfuckAST {
+	@EqualsAndHashCode(callSuper = false)
+	public static class Inc extends BrainfuckAST {
 		private int amount;
 	}
-	
+
 	@Value
-	class Mem implements BrainfuckAST {
+	@EqualsAndHashCode(callSuper = false)
+	public static class Mem extends BrainfuckAST {
 		private int amount;
 	}
-	
+
 	@Value
-	class Loop implements BrainfuckAST {
+	@EqualsAndHashCode(callSuper = false)
+	public static class Loop extends BrainfuckAST {
 		private List<BrainfuckAST> program;
 	}
-	
+
 	@Value
-	class Get implements BrainfuckAST {
-		
+	@EqualsAndHashCode(callSuper = false)
+	public static class Get extends BrainfuckAST {
+
 	}
-	
+
 	@Value
-	class Put implements BrainfuckAST {
-		
+	@EqualsAndHashCode(callSuper = false)
+	public static class Put extends BrainfuckAST {
+
 	}
 }
