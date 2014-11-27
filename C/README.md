@@ -5,13 +5,18 @@ An interpreter for the brianfuck programming language, written in C.
 The interpreter is also capable of translating a Brainfuck program
 into C and Ook!.
 
-Building
---------
+Building + Running
+------------------
 
-Use `make` for building (you'll need make installed) and `./bf -h`
+Use `make` for building (you'll need `make` and `gcc` installed) and `./bf -h`
 for help.
 
 Typical usage is `./bf file.bf`.
+
+Installing
+----------
+
+`make install` will install to `$PREFIX/bin`.
 
 Available command line options
 ------------------------------
