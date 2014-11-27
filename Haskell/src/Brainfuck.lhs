@@ -326,7 +326,7 @@ three things:
 These might be modeled as lists. So the above memory instance
 would become:
 
-+ 9
++ `9`
 + `[ 8, 4, .. ]` (preceeding)
 + `[ 0, 3, 0, 3, 1, .. ]` (following)
 

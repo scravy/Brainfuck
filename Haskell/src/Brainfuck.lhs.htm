@@ -11,7 +11,8 @@
   p, ul, ol { margin: .5em 0; line-height: 1.4em }
   code { border-radius: .4em; background: #eeeeee; padding: .2em; }
   body { font-family: 'Helvetica', 'Arial', sans-serif }
-  blockquote span { display: block }
+  blockquote { white-space: pre }
+  blockquote span { display: inline }
   pre { background: #f0f0f0; border: 1px solid black; padding: 0.5em; }
   pre span { counter-increment: theLines }
   pre span:before { content: counter(theLines); position: absolute;                     display: block; text-align: right;                    margin-left: -3em; padding-right: 2em; margin-top: .2em;                    color: gray; font-size: .83em }
@@ -351,7 +352,7 @@ three things:
 <p>These might be modeled as lists. So the above memory instance
 would become:
 </p>
-<ol><li>9</li>
+<ol><li><code>9</code></li>
 <li><code>[ 8, 4, .. ]</code> (preceeding)</li>
 <li><code>[ 0, 3, 0, 3, 1, .. ]</code> (following)</li>
 </ol>

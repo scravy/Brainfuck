@@ -371,7 +371,7 @@ three things:
 These might be modeled as lists. So the above memory instance
 would become:
 
-1. 9
+1. `9`
 1. `[ 8, 4, .. ]` (preceeding)
 1. `[ 0, 3, 0, 3, 1, .. ]` (following)
 
