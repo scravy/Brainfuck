@@ -1,15 +1,7 @@
 A Brainfuck Interpreter in Haskell
 ==================================
 
-This is a tiny brainfuck interpreter, writte in Haskell,
-with the following Language Extensions:
-
-> {-# LANGUAGE Haskell2010, LambdaCase, NegativeLiterals, GADTs, RecordWildCards #-}
-
-In order to be rebuked by GHC, we order it to warn us about anything
-(except when a variable name is reused in some subordinate scope):
-
-> {-# OPTIONS_GHC -Wall -fno-warn-name-shadowing #-}
+This is a tiny brainfuck interpreter, writte in Haskell.
 
 We are using three helper functions:
 
@@ -41,6 +33,12 @@ The main function of our program works as follows:
 >     stdin <- map (fromIntegral . toInteger . fromEnum) <$> getContents
 > 
 >     getArgs >>= \case
+>         ("-v" : _) -> putStrLn "Thu Nov 27 05:11:41 CET 2014 -- Haskell Brainfuck Interpreter"
+>
+>         ("-h" : _) -> putStr $ "  -p  Pretty print the parse tree\n"
+>                             ++ "  -o  Pretty print the optimized parse tree\n"
+>                             ++ "  -s  Run slow (does not perform any optimizations)\n"
+>
 >         ["-p", f] -> parseBrainfuck <$> readFile f >>= printAST
 > 
 >         ["-o", f] -> parseBrainfuck' <$> readFile f >>= printAST
@@ -106,24 +104,14 @@ An actual Abstract Syntax Tree (`AST`) is either
 - a `Mem` operation which moved the memory pointer (`>` and `<`)
 - `Get` which retrieves a character as an integer from stdin (`,`)
 - `Put` which prints the current memory cell to stdin (`.`)
-- or a Loop - which contains a program which is conditionally executed.
+- or a `Loop` - which contains a program which is conditionally executed.
 
 Note that this structure is capable of holding optimized Brainfuck
 programs which do not `Inc` or `Mem` one but an arbitrary number of
 steps.
 
-> data AST where
->     Inc  :: Word -> AST
->     Mem  :: Word -> AST
->     Get  :: AST
->     Put  :: AST
->     Loop :: Program -> AST
+> data AST = Inc Word | Mem Word | Get | Put | Loop Program
 >   deriving (Show)
-
-The above definition uses GADT Syntax (Generalized Algebraic Data Types).
-Without `-XGADTs` this might be expressed in Standard Haskell as follows:
-
-    data AST = Inc Word | Mem Word | Get | Put | Loop Program
 
 The parser is a recursive functions that iterates on its input until
 nothing is left. Since the Brainfuck script might be malformed
