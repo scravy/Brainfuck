@@ -9,16 +9,20 @@ We are using three helper functions:
 * `<$>` which is just a handy infix operator meaning `fmap`
 * `nicify` which we can use to pretty print the AST of a brainfuck program
 
->     import System.Environment (getArgs)
->     import Data.Functor ((<$>))
->     import Text.Nicify (nicify)
+```haskell
+import System.Environment (getArgs)
+import Data.Functor ((<$>))
+import Text.Nicify (nicify)
+```
 
 The memory of the brainfuck machine is all integers. According to the brainfuck
 specification those should be BigIntegers, but we might want to change that to
 native integers (which do overflow) in order go gain performance. Therefore we
 define a `Word` as `Integer` which may easily be replaced with `Int64` or `Int`.
 
->     type Word = Integer
+```haskell
+type Word = Integer
+```
 
 The main function of our program works as follows:
 
@@ -28,41 +32,47 @@ The main function of our program works as follows:
 * parses the file (using the optimizer or not using the optimizer), and
 * according to the arguments prints them or executes the program in the VM.
 
->     main :: IO ()
->     main = do
->         stdin <- map (fromIntegral . toInteger . fromEnum) <$> getContents
->     
->         getArgs >>= \case
->             ("-v" : _) -> putStrLn "Thu Nov 27 05:11:41 CET 2014 -- Haskell Brainfuck Interpreter"
->     
->             ("-h" : _) -> putStr $ "  -p  Pretty print the parse tree\n"
->                                 ++ "  -o  Pretty print the optimized parse tree\n"
->                                 ++ "  -s  Run slow (does not perform any optimizations)\n"
->                                 ++ "  -h  this help\n"
->                                 ++ "  -v  print version information\n"
->     
->             ["-p", f] -> parseBrainfuck <$> readFile f >>= printAST
->     
->             ["-o", f] -> parseBrainfuck' <$> readFile f >>= printAST
->     
->             ["-s", f] -> parseBrainfuck <$> readFile f >>= executeAST stdin
->     
->             [f] -> parseBrainfuck' <$> readFile f >>= executeAST stdin
->     
->             _ -> putStrLn $  "You need to specify exactly one argument: "
->                           ++ "The brainfuck script-file to execute."
+```haskell
+main :: IO ()
+main = do
+    stdin <- map (fromIntegral . toInteger . fromEnum) <$> getContents
+
+    getArgs >>= \case
+        ("-v" : _) -> putStrLn "Thu Nov 27 05:11:41 CET 2014 -- Haskell Brainfuck Interpreter"
+
+        ("-h" : _) -> putStr $ "  -p  Pretty print the parse tree\n"
+                            ++ "  -o  Pretty print the optimized parse tree\n"
+                            ++ "  -s  Run slow (does not perform any optimizations)\n"
+                            ++ "  -h  this help\n"
+                            ++ "  -v  print version information\n"
+
+        ["-p", f] -> parseBrainfuck <$> readFile f >>= printAST
+
+        ["-o", f] -> parseBrainfuck' <$> readFile f >>= printAST
+
+        ["-s", f] -> parseBrainfuck <$> readFile f >>= executeAST stdin
+
+        [f] -> parseBrainfuck' <$> readFile f >>= executeAST stdin
+
+        _ -> putStrLn $  "You need to specify exactly one argument: "
+                      ++ "The brainfuck script-file to execute."
+```
 
 A few helper functions, so that we do not repeat ourselves too much:
 
->       where
->         printAST = either putStrLn (putStrLn . nicify. show)
+```haskell
+  where
+    printAST = either putStrLn (putStrLn . nicify. show)
+```
 
 `-p` and `-o` will print the abstract syntax tree. `printAST` will
 either print (`putStrLn`) an error message or `show` (`a -> String`)
 the AST, pretty print if (`nicify :: String -> String`) and put it
 to the screen (`putStrLn`).
 
->         executeAST input = either putStrLn (mapM_ printChar . runBrainfuck input)
+```haskell
+    executeAST input = either putStrLn (mapM_ printChar . runBrainfuck input)
+```
 
 `executeAST` works just as `printAST`, just that instead of pretty
 printing and showing the AST it will execute it using the given `input`
@@ -73,19 +83,23 @@ We ignore the result since we are only interested in the side effects
 (induced by `putStrLn :: String -> IO ()`. The result type `IO ()` merely
 means "this function is performing IO").
 
->         printChar = putStr . return . toEnum . fromIntegral
+```haskell
+    printChar = putStr . return . toEnum . fromIntegral
+```
 
 A few more helper functions which get rid of the need to supply the
 accumulator arguments to the actual functions which we are going to
 define later on:
 
->     parseBrainfuck, parseBrainfuck' :: String -> Either String Program
->     
->     parseBrainfuck' = fmap optimize . parseBrainfuck
->     parseBrainfuck = parse [] []
->     
->     runBrainfuck :: Input -> Program -> [Word]
->     runBrainfuck input = exec (mkVM input)
+```haskell
+parseBrainfuck, parseBrainfuck' :: String -> Either String Program
+
+parseBrainfuck' = fmap optimize . parseBrainfuck
+parseBrainfuck = parse [] []
+
+runBrainfuck :: Input -> Program -> [Word]
+runBrainfuck input = exec (mkVM input)
+```
 
 Let's write a Brainfuck Interpreter!
 
@@ -98,7 +112,9 @@ A `Program` consists of a Sequence of Steps, which we will model
 as Abstract Syntax Trees (after all Brainfuck programs may contain
 loops):
 
->     type Program = [AST]
+```haskell
+type Program = [AST]
+```
 
 An actual Abstract Syntax Tree (`AST`) is either
 
@@ -112,8 +128,10 @@ Note that this structure is capable of holding optimized Brainfuck
 programs which do not `Inc` or `Mem` one but an arbitrary number of
 steps.
 
->     data AST = Inc Word | Mem Word | Get | Put | Loop Program
->       deriving (Show)
+```haskell
+data AST = Inc Word | Mem Word | Get | Put | Loop Program
+  deriving (Show)
+```
 
 The parser is a recursive functions that iterates on its input until
 nothing is left. Since the Brainfuck script might be malformed
@@ -134,7 +152,9 @@ The second accumulator holds the program we read so far.
 
 The third argument is simply the list containing the script.
 
->     parse :: [Program] -> Program -> String -> Either String Program
+```haskell
+parse :: [Program] -> Program -> String -> Either String Program
+```
 
 Our strategy for parsing a brainfuck program is as follows:
 Given a Brainfuck program (Like `,+[-.,+]`, which is the shortest
@@ -189,25 +209,31 @@ Here is the implementation:
 The parser distinguishes whether its input argument (the script)
 actually contains a character or does not contain anything anymore:
 
->     parse blocks block = \case
->     
->         x : xs -> case x of
+```haskell
+parse blocks block = \case
+
+    x : xs -> case x of
+```
 
 In case of the 6 easy commands, we just go on (`next`), putting the
 command read in the program (see the definition of `next`).
 
->             '.' -> next $ Put
->             ',' -> next $ Get
->             '+' -> next $ Inc 1
->             '-' -> next $ Inc -1
->             '>' -> next $ Mem 1
->             '<' -> next $ Mem -1
+```haskell
+        '.' -> next $ Put
+        ',' -> next $ Get
+        '+' -> next $ Inc 1
+        '-' -> next $ Inc -1
+        '>' -> next $ Mem 1
+        '<' -> next $ Mem -1
+```
 
 In case of the opening rectangular bracket (`[`) we take the current
 program (`block`) and push it onto the first accumulator. The now following
 subprogram is yet empty (`[]`). Read the rest (`xs`).
 
->             '[' -> parse (block : blocks) [] xs
+```haskell
+        '[' -> parse (block : blocks) [] xs
+```
 
 A closing bracket poses a challenge. If we do not have any 'super programs'
 we have nothing to continue parsing on (this is the case when there is a
@@ -220,31 +246,39 @@ Note since that lists in Haskell allow only for efficient appending at
 the front we have to reverse the block which defines the `Loop` which
 is now completely read.
 
->             ']'
->               | null blocks -> fail "encountered closing brace while there is no opening one"
->               | otherwise   -> parse (tail blocks) (Loop (reverse block) : head blocks) xs
+```haskell
+        ']'
+          | null blocks -> fail "encountered closing brace while there is no opening one"
+          | otherwise   -> parse (tail blocks) (Loop (reverse block) : head blocks) xs
+```
 
 Every character that is not one of the 8 control characters of Brainfuck
 is ignored and we just continue parsing the rest (`xs`) of the script
 without changing any of the given arguments (`blocks` and `block`).
 
->             _ -> parse blocks block xs
+```haskell
+        _ -> parse blocks block xs
+```
 
 `next` is defined as "prepend the new command to the current block
 
                       and go on parsing the rest":
 
->           where
->             next = \cmd -> parse blocks (cmd : block) xs
+```haskell
+      where
+        next = \cmd -> parse blocks (cmd : block) xs
+```
 
 When we run out of characters ('end of file', 'the empty script')
 we check whether there are `blocks` remaining (everything is fine
 if the stack of 'super programs' is empty). If there are super programs
 remaining we are stuck in an unclosed loop.
 
->         _
->           | null blocks -> return (reverse block)
->           | otherwise   -> fail "unclosed open braces left"
+```haskell
+    _
+      | null blocks -> return (reverse block)
+      | otherwise   -> fail "unclosed open braces left"
+```
 
 That is the complete parser which turns a
 `String` (a list of characters, `[Char]`)
@@ -258,13 +292,17 @@ stems from the fact that there is no way of expressing
 "add 17 to the current memory cell" (you do "add 1" 17 times).
 We can do better by optimizing our program.
 
->     optimize :: Program -> Program
+```haskell
+optimize :: Program -> Program
+```
 
 The optimizer combines adjacent `Inc` and `Mem` operations:
 
->     optimize = \case
->         Inc n : Inc m : zs -> optimize $ Inc (n + m) : zs
->         Mem n : Mem m : zs -> optimize $ Mem (n + m) : zs
+```haskell
+optimize = \case
+    Inc n : Inc m : zs -> optimize $ Inc (n + m) : zs
+    Mem n : Mem m : zs -> optimize $ Mem (n + m) : zs
+```
 
 Note that `$` is just an infix operator doing function application
 (`($) :: (a -> b) -> a -> b`). Haskell programmers typically use `$`
@@ -274,17 +312,23 @@ So `optimize $ ...` is really the same thing as `optimize (...)`.
 
 In case of a loop it recursively descends into that subprogram:
 
->         Loop xs : zs       -> Loop (optimize xs) : optimize zs
+```haskell
+    Loop xs : zs       -> Loop (optimize xs) : optimize zs
+```
 
 In all other cases it leaves the current command untouched (`z`)
 and proceeds optimizing the rest (`optimize zs`).
 
->         z : zs             -> z : optimize zs
+```haskell
+    z : zs             -> z : optimize zs
+```
 
 Everything else (the only matching case is [] actually) results
 in the empty program (`[]`, since programs are defined as lists of ASTs).
 
->         _                  -> []
+```haskell
+    _                  -> []
+```
 
 That was fun! We are now able to parse a Brainfuck script into a
 `Program` and we even optimize it.
@@ -295,11 +339,13 @@ The Brainfuck Virtual Machine
 A Brainfuck script executes on the Brainfuck VM, which consists of
 a memory, an input, and a call stack.
 
->     data VM = VM {
->         memory    :: Memory
->       , input     :: Input
->       , callStack :: [Program]
->      }
+```haskell
+data VM = VM {
+    memory    :: Memory
+  , input     :: Input
+  , callStack :: [Program]
+ }
+```
 
 While in most imperative languages one would model the memory as
 a mutable array, we do not do that in Haskell. Also the Brainfuck
@@ -334,65 +380,73 @@ Note that the dots imply that the list might be infinitely large
 
 Here is how we might write that model down in Haskell:
 
->     type Memory = ([Word], Word, [Word])
+```haskell
+type Memory = ([Word], Word, [Word])
+```
 
 The input is just a list of `Word`s:
 
->     type Input = [Word]
+```haskell
+type Input = [Word]
+```
 
 We may define a factory for creating VMs with an empty memory and empty
 call stack using a given input like so:
 
->     mkVM :: Input -> VM
->     mkVM input = VM { memory = ([], 0, []), input = input, callStack = [] }
+```haskell
+mkVM :: Input -> VM
+mkVM input = VM { memory = ([], 0, []), input = input, callStack = [] }
+```
 
 Running the Brainfuck VM takes an existing VM and a Program, returning
 its output (a list of `Word`s that were put using `Put` (`.` in BF)).
 
->     exec :: VM -> Program -> [Word]
->     
->     exec vm@(VM { .. }) (command : commands) = case command of
->     
->         Inc n -> next (updateMemory (upd (+ n)) vm)
->     
->         Mem n -> next (updateMemory (move n)    vm)
->     
->         Get
->           | null input -> []
->           | otherwise  -> next (updateInput tail . updateMemory (upd (const (head input))) $ vm)
->     
->         Put -> cell : next vm
->     
->         Loop commands'
->           | cell == 0 -> next vm
->           | otherwise -> exec (vm { callStack = commands' : commands : callStack }) commands'
->     
->       where
->         next = \vm' -> exec vm' commands
->     
->         (_, cell, _) = memory
->     
->         upd f (lc, cc, rc) = (lc, f cc, rc)
->     
->         move n mem@(lc, cc, rc)
->           | n > 0     = move (n - 1) (cc : lc, safeHead 0 rc, drop 1 rc)
->           | n < 0     = move (n + 1) (drop 1 lc, safeHead 0 lc, cc : rc)
->           | otherwise = mem
->     
->         safeHead def = \case
->             x : _ -> x
->             _     -> def
->     
->         updateMemory f vm@(VM { .. }) = vm { memory = f memory }
->         updateInput  f vm@(VM { .. }) = vm { input  = f input }
->     
->     exec vm@(VM { .. }) [] = case callStack of
->     
->         commands : commands' : callStack'
->           | cell == 0 -> exec (vm { callStack = callStack' }) commands'
->           | otherwise -> exec vm commands
->     
->         _ -> []
->     
->       where
->         (_, cell, _) = memory
+```haskell
+exec :: VM -> Program -> [Word]
+
+exec vm@(VM { .. }) (command : commands) = case command of
+
+    Inc n -> next (updateMemory (upd (+ n)) vm)
+
+    Mem n -> next (updateMemory (move n)    vm)
+
+    Get
+      | null input -> []
+      | otherwise  -> next (updateInput tail . updateMemory (upd (const (head input))) $ vm)
+
+    Put -> cell : next vm
+
+    Loop commands'
+      | cell == 0 -> next vm
+      | otherwise -> exec (vm { callStack = commands' : commands : callStack }) commands'
+
+  where
+    next = \vm' -> exec vm' commands
+
+    (_, cell, _) = memory
+
+    upd f (lc, cc, rc) = (lc, f cc, rc)
+
+    move n mem@(lc, cc, rc)
+      | n > 0     = move (n - 1) (cc : lc, safeHead 0 rc, drop 1 rc)
+      | n < 0     = move (n + 1) (drop 1 lc, safeHead 0 lc, cc : rc)
+      | otherwise = mem
+
+    safeHead def = \case
+        x : _ -> x
+        _     -> def
+
+    updateMemory f vm@(VM { .. }) = vm { memory = f memory }
+    updateInput  f vm@(VM { .. }) = vm { input  = f input }
+
+exec vm@(VM { .. }) [] = case callStack of
+
+    commands : commands' : callStack'
+      | cell == 0 -> exec (vm { callStack = callStack' }) commands'
+      | otherwise -> exec vm commands
+
+    _ -> []
+
+  where
+    (_, cell, _) = memory
+```
