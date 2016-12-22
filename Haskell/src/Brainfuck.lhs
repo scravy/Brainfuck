@@ -12,6 +12,7 @@ We are using three helper functions:
 > import System.Environment (getArgs)
 > import Data.Functor ((<$>))
 > import Text.Nicify (nicify)
+> import Prelude hiding (Word)
 
 The memory of the brainfuck machine is all integers. According to the brainfuck
 specification those should be BigIntegers, but we might want to change that to

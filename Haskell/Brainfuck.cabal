@@ -15,7 +15,7 @@ executable bf
     hs-source-dirs:     src
     main-is:            Brainfuck.lhs
 
-    build-depends:      base >=4.7 && <4.8
+    build-depends:      base >=4.8 && <5.0
                         , nicify >=1.1 && <1.2
 
     default-language:   Haskell2010
