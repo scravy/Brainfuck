@@ -1,7 +1,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 
-#define VERSION "Thu Nov 27 04:13:16 CET 2014 -- brainfuck interpreter by tiredness can kill at warhog dot net"
+#define VERSION "Thu Dec 22 11:25:54 CET 2016 -- brainfuck interpreter by tirednesscankill at warhog dot net"
 
 #define MEM 30000
 #define BUF 4096
@@ -13,15 +13,15 @@
 
 int main(int argc, char** argv)
 {    
-    char* code = 0;
+    char* code = NULL;
     long length = 0;
-    long buf = BUF;
-    long max = MEM;
+    size_t bufsize= BUF;
+    size_t memsize = MEM;
     int* memory = 0;
     char options = 0;
     
     int i;
-    char* file = 0;
+    char* file = NULL;
     
     for (i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
@@ -30,9 +30,9 @@ int main(int argc, char** argv)
                 n = argv[i][2];
             }
             if (n == 'm') {
-                max = atoi(argv[++i]);
+                memsize = atoi(argv[++i]);
             } else if (n == 'b') {
-                buf = atoi(argv[++i]);
+                bufsize = atoi(argv[++i]);
             } else if (n == 'r') {
                 code = argv[++i];
                 while (code[length] != '\0') {
@@ -68,10 +68,11 @@ int main(int argc, char** argv)
     
     if (!code) {
         if (!file) {
-            if (!(code = malloc(buf))) {
-                return 3;
+            if (!(code = calloc(1, bufsize))) {
+                return 5;
             }
-            length = fread(code, 1, buf, stdin);
+            /*printf("\n");*/
+            length = fread(code, 1, bufsize - 1, stdin);
         } else {
             FILE* f;
             
@@ -84,13 +85,15 @@ int main(int argc, char** argv)
             if (!(code = malloc(length))) {
                 return 3;
             }
-            fread(code, 1, length, f);
+            if (fread(code, 1, length, f) != length) {
+                return 4;
+            }
             fclose(f);
         }
     }
     
     if (code) {
-        int max1, p, sp, c = 0;
+        int max1, p, c = 0;
         
         if (!(options & OPT_NO_PARENTHESIS_CHECK)) {
             for (i = 0; i < length; i++) {
@@ -123,7 +126,7 @@ int main(int argc, char** argv)
             printf("%s\n\n",    "#include \"stdio.h\"");
             printf("%s\n\n",    "#include \"stdlib.h\"");
             printf("%s\n",      "int main() {");
-            printf("\tint* memory = malloc(%li);\n", max);
+            printf("\tint* memory = malloc(%li);\n", memsize);
             printf("\t%s\n",    "int p = 0;");
             printf("\t%s\n",    "if (!memory) return 2;");
             p = '\0';
@@ -136,13 +139,13 @@ int main(int argc, char** argv)
                     if (p == '+') {
                         printf("\tmemory[p] += %i;\n", c);
                         if (options & 4) {
-                            printf("\tmemory[p] %%= %li;\n", max);
+                            printf("\tmemory[p] %%= %li;\n", memsize);
                         }
                         c = 0;
                     } else if (p == '-') {
                         if (options & 4) {
-                            printf("\tmemory[p] += %li;\n", max - c);
-                            printf("\tmemory[p] %%= %li;\n", max);
+                            printf("\tmemory[p] += %li;\n", memsize - c);
+                            printf("\tmemory[p] %%= %li;\n", memsize);
                         } else {
                             printf("\tmemory[p] -= %i;\n", c);
                         }
@@ -183,26 +186,25 @@ int main(int argc, char** argv)
             return 0;   
         }
         
-        if (!(memory = malloc(max))) {
+        if (!(memory = calloc(1, memsize))) {
             return 3;
         }
         
-        max1 = max - 1;
+        max1 = memsize - 1;
         p = 0;
-        sp = 0;
         
-        for (i = 0; i < max; i++) {
+        for (i = 0; i < memsize; i++) {
             memory[i] = 0;
         }
         for (i = 0; i < length; i++) {
             switch (code[i]) {
             case '>':
                 p++;
-                p %= max;
+                p %= memsize;
                 break;
             case '<':
                 p += max1;
-                p %= max;
+                p %= memsize;
                 break;
             case '+':
                 memory[p]++;
